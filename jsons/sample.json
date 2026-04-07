@@ -1,0 +1,10 @@
+{
+    "type": "count_change",
+    "screenshot_a": "../../screens/sample/count_before.png",
+    "screenshot_b": "../../screens/sample/count_after.png",
+    "bounds": [100, 200, 300, 400],
+    "expected_passed": true,
+    "label": "pass",
+    "description": "示例：检测点赞按钮点击后点赞数是否增加",
+    "note": "expected_passed是人工标注的groundtruth，表示期望检测到数量变化"
+}

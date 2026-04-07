@@ -1,0 +1,9 @@
+{
+  "task_id": "toast_validation_demo",
+  "task_type": "toast",
+  "video_file": "../../toast.mp4",
+  "sample_interval_sec": 0.5,
+  "start_sec": 0.0,
+  "end_sec": 8.0,
+  "expected_passed": true
+}

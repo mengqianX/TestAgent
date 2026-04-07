@@ -1,0 +1,9 @@
+{
+  "task_id": "toast_omninote_add_tag",
+  "mode": "targeted",
+  "task_type": "toast",
+  "video_file": "toast-2-omninote-新增笔记后添加tag.mp4",
+  "sample_interval_sec": 0.5,
+  "start_sec": 0.0,
+  "expected_passed": true
+}

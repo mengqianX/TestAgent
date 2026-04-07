@@ -1,0 +1,10 @@
+{
+    "type": "count_change",
+    "screenshot_a": "../../screens/Android/sample/like_before.png",
+    "screenshot_b": "../../screens/Android/sample/like_after.png",
+    "bounds": [1107, 656, 1160, 709],
+    "expected_passed": true,
+    "label": "pass",
+    "description": "Android平台：检测点赞按钮点击后点赞数是否变化（因为涉及到并发场景）",
+    "note": "expected_passed是人工标注的groundtruth，表示期望检测到数量变化"
+}

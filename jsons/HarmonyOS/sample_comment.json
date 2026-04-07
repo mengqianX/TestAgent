@@ -1,0 +1,10 @@
+{
+    "type": "count_change",
+    "screenshot_a": "../../screens/HarmonyOS/sample/comment_before.png",
+    "screenshot_b": "../../screens/HarmonyOS/sample/comment_after.png",
+    "bounds": [0, 0, 0, 0],
+    "expected_passed": true,
+    "label": "pass",
+    "description": "HarmonyOS平台：检测评论按钮点击后评论数是否增加（占位符）",
+    "note": "expected_passed是人工标注的groundtruth，表示期望检测到数量变化"
+}

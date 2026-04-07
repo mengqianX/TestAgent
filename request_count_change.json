@@ -1,0 +1,15 @@
+{
+  "task_id": "count_change_demo",
+  "task_type": "count_change",
+  "before_image": "data/my_api_run/frames/auto_scan_demo_t2.00_idx0002.png",
+  "after_image": "data/my_api_run/frames/auto_scan_demo_t3.00_idx0003.png",
+  "control_bounds": {
+    "x": 280,
+    "y": 730,
+    "width": 90,
+    "height": 90
+  },
+  "expected_count_change": "any_change",
+  "metric_hints": ["点赞", "赞", "like"],
+  "control_name_hint": "点赞按钮"
+}

@@ -1,0 +1,9 @@
+{
+    "task_id": "count_change_demo",
+    "task_type": "count_change",
+    "type": "count_change",
+    "before_image": "../../screens/Android/sample/cart_before.png",
+    "after_image": "../../screens/Android/sample/cart_after.png",
+    "bounds": [953,1087,1022,1156],
+    "expected_passed": true
+}

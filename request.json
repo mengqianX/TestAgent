@@ -1,0 +1,8 @@
+{
+  "task_id": "auto_scan_demo",
+  "video_file": "长时间加载.mp4",
+  "task_type": "loading",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "end_sec": 10.0
+}
