@@ -82,7 +82,7 @@ def _generate_recent_stats_after_session():
     在该 pytest 进程测试结束后自动生成最近 runs 统计表。
     """
     yield
-    cmd = [sys.executable, "generate_recent_run_stats.py", "--limit", "30"]
+    cmd = [sys.executable, "generate_recent_run_stats.py", "--limit", "30", "--version", "v5", "--model", "gpt-4o"]
     env = os.environ.copy()
     for key in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"]:
         env.pop(key, None)

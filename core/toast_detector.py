@@ -13,6 +13,7 @@ from typing import Any
 from core.evaluator import VisionEvaluator
 from core.perception import ExtractedFrame
 from core.preprocessor import GuiPreprocessor
+from core.prompt_builders import build_prompt_for_type, render_toast_user_prompt
 
 
 @dataclass
@@ -49,6 +50,7 @@ class ToastMessageDetector:
         preprocessor: GuiPreprocessor | None = None,
         enable_preprocess: bool = True,
         top_k_candidates: int = 3,
+        prompt_version: str = "current",
         # early_stop_confidence: float = 0.95,
     ) -> None:
         self.evaluator = evaluator
@@ -57,6 +59,13 @@ class ToastMessageDetector:
         self.preprocessor = preprocessor
         self.enable_preprocess = enable_preprocess
         self.top_k_candidates = max(1, int(top_k_candidates))
+        self.prompt_pack = build_prompt_for_type(
+            task_type="toast",
+            context={
+                "prompt_version": prompt_version,
+                "logger": self.logger,
+            },
+        )
         # self.early_stop_confidence = min(1.0, max(0.0, float(early_stop_confidence)))
 
     @staticmethod
@@ -133,8 +142,11 @@ class ToastMessageDetector:
             "图1:动作前完整帧（必须用于推断操作语义）",
             "图2:候选完整帧（可能包含toast）",
         ]
-        for path in extra_image_paths:
+        for idx, path in enumerate(extra_image_paths):
             name = path.name.lower()
+            if idx == 0:
+                labels.append("图3:后续完整帧（用于判断是否为瞬时提示）")
+                continue
             if "after_roi" in name:
                 labels.append("局部ROI:候选帧toast区域裁剪")
             elif "center_roi" in name:
@@ -146,6 +158,19 @@ class ToastMessageDetector:
         return labels
 
     @staticmethod
+    def _compact_preprocess_structured(preprocess_structured: dict[str, Any] | None) -> dict[str, Any]:
+        """压缩前处理证据，减少 prompt 噪声与 token 开销。"""
+        if not preprocess_structured:
+            return {}
+        return {
+            "candidate_index": preprocess_structured.get("candidate_index"),
+            "candidate_source": preprocess_structured.get("candidate_source"),
+            "candidate_roi_box": preprocess_structured.get("candidate_roi_box"),
+            "roi_changed_ratio": preprocess_structured.get("roi_changed_pixel_ratio_center_to_after"),
+            "roi_mean_abs_diff": preprocess_structured.get("roi_mean_abs_diff_center_to_after"),
+        }
+
+    @staticmethod
     def _select_final_candidate(candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
         if not candidates:
             return None
@@ -153,14 +178,30 @@ class ToastMessageDetector:
         def _rank_key(candidate: dict[str, Any]) -> tuple[float, int]:
             return (float(candidate.get("confidence") or 0.0), int(candidate.get("idx") or 0))
 
-        visible_failures = [c for c in candidates if bool(c.get("toast_visible")) and (not bool(c.get("expectation_met")))]
-        if visible_failures:
-            # 冲突候选优先，避免“正常 toast”覆盖真实异常。
-            return max(visible_failures, key=_rank_key)
+        visible_reliable_failures = [
+            c
+            for c in candidates
+            if bool(c.get("toast_visible"))
+            and (not bool(c.get("expectation_met")))
+            and (not bool(c.get("is_uncertain_action")))
+        ]
+        if visible_reliable_failures:
+            # 仅“可解释且低风险”的冲突候选优先，避免不确定动作导致误报。
+            return max(visible_reliable_failures, key=_rank_key)
 
         visible_expectations_met = [c for c in candidates if bool(c.get("toast_visible")) and bool(c.get("expectation_met"))]
         if visible_expectations_met:
             return max(visible_expectations_met, key=_rank_key)
+
+        visible_uncertain_failures = [
+            c
+            for c in candidates
+            if bool(c.get("toast_visible"))
+            and (not bool(c.get("expectation_met")))
+            and bool(c.get("is_uncertain_action"))
+        ]
+        if visible_uncertain_failures:
+            return max(visible_uncertain_failures, key=_rank_key)
 
         return max(candidates, key=_rank_key)
 
@@ -176,7 +217,7 @@ class ToastMessageDetector:
         if len(sampled_frames) < 2:
             raise ValueError("toast 检测至少需要 2 帧")
 
-        task_intent = "检测动作触发后的 toast 文案是否与预期语义一致。"
+        task_intent = self.prompt_pack.task_intent or "检测动作触发后的 toast 文案是否与预期语义一致。"
         keywords_text = "、".join(expected_toast_keywords or []) if expected_toast_keywords else "无"
 
         evaluated_candidates: list[dict[str, Any]] = []
@@ -266,37 +307,21 @@ class ToastMessageDetector:
                     if self.debug:
                         self.logger.warning("toast 前处理失败: idx=%s, err=%s", idx, exc)
 
-            system_prompt = (
-                "你是资深移动端 UI 测试专家，擅长 toast 识别与上下文语义推理。"
-                "你将看到动作前、动作后（候选 toast 帧）以及后续帧。"
-                "请判断候选帧是否出现 toast，并提取 toast 文案，推理触发动作语义，"
-                "并基于动作语义推断“系统应该给出的 toast 文案语义”。"
-                "必须遵循以下顺序："
-                "1) 先只根据动作前完整帧和候选完整帧中的界面元素推断 action_semantic；"
-                "2) 再读取 toast_text；"
-                "3) 最后做 expectation_met 判定。"
-                "禁止根据 toast_text 反推动作语义。"
-                "若 action_semantic 与 toast_text 语义冲突（如“选择标签”vs“移入回收站”），"
-                "expectation_met 必须为 false。"
-                "若文案属于页面固定内容（如底部统计、页脚状态栏）而非瞬时浮层提示，toast_visible 必须为 false。"
-                "请严格输出 JSON，且只输出 JSON。"
-                "JSON 必须包含字段："
-                "toast_visible(bool), toast_text(str), action_semantic(str), "
-                "inferred_expected_toast_text(str), expectation_met(bool), confidence(number), reason(str)。"
-            )
-            user_prompt = (
-                f"任务意图：{task_intent}\n"
-                f"候选帧时间：{center.timestamp_sec:.2f}s\n"
-                f"测试关键词提示（可选）：{keywords_text}\n"
-                f"前处理摘要：{preprocess_summary}\n"
-                f"前处理结构化证据(JSON)：{json.dumps(preprocess_structured, ensure_ascii=False) if preprocess_structured else '{}'}\n"
-                "请综合三张图（前一帧、候选帧、后一帧）判断是否出现 toast。"
-                "你需要先推断动作应触发的 toast 语义（inferred_expected_toast_text），"
-                "再比较实际 toast_text 与推断语义是否一致：一致则 expectation_met=true，否则 false。"
-                "注意：这是语义一致判定，不要求文案逐字完全相同；"
-                "若核心含义一致（例如“进入房间失败”与“进入直播间失败，请稍后重试”），expectation_met 应为 true。"
-                "请优先使用证据聚焦可能的 toast 区域，但最终结论以图像事实为准。"
-                "图像角色顺序：图1=动作前完整帧，图2=候选完整帧，其余为辅助证据图。"
+            system_prompt = self.prompt_pack.system_prompt
+            user_prompt = render_toast_user_prompt(
+                prompt_pack=self.prompt_pack,
+                context={
+                    "task_intent": task_intent,
+                    "candidate_timestamp_sec": center.timestamp_sec,
+                    "keywords_text": keywords_text,
+                    "preprocess_summary": preprocess_summary,
+                    "preprocess_structured_json": json.dumps(
+                        self._compact_preprocess_structured(preprocess_structured),
+                        ensure_ascii=False,
+                    )
+                    if preprocess_structured
+                    else "{}",
+                },
             )
 
             scanned += 1
@@ -313,7 +338,10 @@ class ToastMessageDetector:
                         "toast_text": str,
                         "action_semantic": str,
                         "inferred_expected_toast_text": str,
-                        "expectation_met": bool,
+                        "expectation_met": (bool, type(None)),
+                        "reverse_inference_risk": str,
+                        "action_evidence_from_frame12": str,
+                        "toast_evidence_from_frame23": str,
                         "reason": str,
                     },
                     # extra_image_paths=[after.image_path] + preprocess_extra_images,
@@ -330,12 +358,33 @@ class ToastMessageDetector:
             parsed = result.parsed_json
             confidence = float(parsed["confidence"]) if parsed.get("confidence") is not None else 0.0
             toast_text = str(parsed.get("toast_text", ""))
+            action_semantic = str(parsed.get("action_semantic", ""))
             inferred_expected_toast_text = str(parsed.get("inferred_expected_toast_text", ""))
-            raw_expectation_met = bool(parsed.get("expectation_met", False))
+            raw_expectation = parsed.get("expectation_met", False)
+            raw_expectation_met = bool(raw_expectation) if isinstance(raw_expectation, bool) else False
             toast_visible = bool(parsed["toast_visible"])
+            reverse_inference_risk = str(parsed.get("reverse_inference_risk", "low")).strip().lower()
+            action_evidence_from_frame12 = str(parsed.get("action_evidence_from_frame12", "")).strip()
+            toast_evidence_from_frame23 = str(parsed.get("toast_evidence_from_frame23", "")).strip()
+            action_semantic_norm = action_semantic.strip().lower()
+            expectation_unknown = raw_expectation is None
+            if action_semantic_norm in {"unknown", "uncertain", "不确定", "无法确定", "未知"}:
+                expectation_unknown = True
+
+            # 硬门控：未检测到 toast 时，不继续做文案/预期判断，降低结果抖动。
+            if not toast_visible:
+                toast_text = ""
+                inferred_expected_toast_text = ""
+                raw_expectation_met = False
+
             semantic_equivalent = self._semantic_equivalent_toast(toast_text, inferred_expected_toast_text)
             expectation_met = raw_expectation_met or semantic_equivalent
             reason = str(parsed.get("reason", ""))
+            if reverse_inference_risk not in {"low", "high"}:
+                reverse_inference_risk = "high"
+            is_uncertain_action = expectation_unknown or (reverse_inference_risk == "high")
+            if expectation_unknown:
+                expectation_met = False
 
             roi_changed_ratio = None
             if preprocess_structured is not None:
@@ -356,18 +405,31 @@ class ToastMessageDetector:
 
             if expectation_met and (not raw_expectation_met) and semantic_equivalent:
                 reason = f"{reason}（后处理修正：文案非逐字一致，但语义一致，按 expectation_met=true 处理。）".strip()
+            if toast_visible and expectation_met and reverse_inference_risk == "high":
+                expectation_met = False
+                reason = (
+                    f"{reason}（后处理修正：模型标记存在反向推断风险，按 expectation_met=false 保守处理。）"
+                ).strip()
+            if toast_visible and (not expectation_met) and is_uncertain_action:
+                reason = f"{reason}（后处理修正：动作语义可观测性不足，按不确定处理。）".strip()
             candidate = {
                 "idx": idx,
                 "frame": center,
                 "toast_visible": toast_visible,
                 "toast_text": toast_text,
-                "action_semantic": str(parsed.get("action_semantic", "")),
+                "action_semantic": action_semantic,
                 "inferred_expected_toast_text": inferred_expected_toast_text,
                 "expectation_met": expectation_met,
+                "is_uncertain_action": is_uncertain_action,
                 "reason": reason,
                 "confidence": confidence,
                 "raw_response": result.raw_response,
-                "preprocess_evidence": preprocess_structured,
+                "preprocess_evidence": {
+                    **(preprocess_structured or {}),
+                    "reverse_inference_risk": reverse_inference_risk,
+                    "action_evidence_from_frame12": action_evidence_from_frame12,
+                    "toast_evidence_from_frame23": toast_evidence_from_frame23,
+                },
             }
 
             evaluated_candidates.append(candidate)
@@ -402,7 +464,7 @@ class ToastMessageDetector:
             )
 
         if best_candidate["toast_visible"]:
-            bug_detected = not best_candidate["expectation_met"]
+            bug_detected = (not best_candidate["expectation_met"]) and (not bool(best_candidate.get("is_uncertain_action")))
         else:
             bug_detected = False
         detect_elapsed_ms = (time.perf_counter() - detect_start) * 1000.0

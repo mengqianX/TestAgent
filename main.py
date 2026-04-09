@@ -245,6 +245,7 @@ def run() -> None:
     enable_preprocess = os.getenv("VGA_ENABLE_PREPROCESS", "1").strip() in {"1", "true", "True", "YES", "yes"}
     preprocess_max_images = int(os.getenv("VGA_PREPROCESS_MAX_EXTRA_IMAGES", "2"))
     toast_top_k_candidates = int(os.getenv("VGA_TOAST_TOP_K_CANDIDATES", "3"))
+    toast_prompt_version = os.getenv("VGA_TOAST_PROMPT_VERSION", "current").strip() or "current"
     toast_min_contour_area = int(os.getenv("VGA_TOAST_MIN_CONTOUR_AREA", "1200"))
     toast_size_target_ratio = float(os.getenv("VGA_TOAST_SCORE_SIZE_TARGET_RATIO", "0.10"))
     toast_size_tolerance = float(os.getenv("VGA_TOAST_SCORE_SIZE_TOLERANCE", "0.10"))
@@ -269,6 +270,16 @@ def run() -> None:
     toast_transition_penalty_threshold = float(os.getenv("VGA_TOAST_TRANSITION_PENALTY_THRESHOLD", "0.08"))
     toast_transition_penalty_scale = float(os.getenv("VGA_TOAST_TRANSITION_PENALTY_SCALE", "1.5"))
     toast_transition_penalty_max = float(os.getenv("VGA_TOAST_TRANSITION_PENALTY_MAX", "0.45"))
+    auto_crop_black_borders = os.getenv("VGA_AUTO_CROP_BLACK_BORDERS", "1").strip() in {
+        "1",
+        "true",
+        "True",
+        "YES",
+        "yes",
+    }
+    crop_black_threshold = int(os.getenv("VGA_CROP_BLACK_THRESHOLD", "16"))
+    crop_min_nonblack_ratio_per_line = float(os.getenv("VGA_CROP_MIN_NONBLACK_RATIO_PER_LINE", "0.01"))
+    crop_min_area_ratio = float(os.getenv("VGA_CROP_MIN_AREA_RATIO", "0.10"))
 
     evaluator = VisionEvaluator(
         api_key=api_key,
@@ -323,8 +334,14 @@ def run() -> None:
         preprocessor=preprocessor,
         enable_preprocess=enable_preprocess,
         top_k_candidates=toast_top_k_candidates,
+        prompt_version=toast_prompt_version,
     )
-    extractor = FrameExtractor()
+    extractor = FrameExtractor(
+        auto_crop_black_borders=auto_crop_black_borders,
+        black_pixel_threshold=crop_black_threshold,
+        min_nonblack_ratio_per_line=crop_min_nonblack_ratio_per_line,
+        min_crop_area_ratio=crop_min_area_ratio,
+    )
 
     logger.info(
         "任务输入: task_id=%s, mode=%s, task_type=%s, task_type_scope=%s",
@@ -336,11 +353,12 @@ def run() -> None:
     logger.info(
         (
             "前处理开关: enable_preprocess=%s, max_extra_images=%s, "
-            "toast_top_k_candidates=%s"
+            "toast_top_k_candidates=%s, toast_prompt_version=%s"
         ),
         enable_preprocess,
         preprocess_max_images,
         toast_top_k_candidates,
+        toast_prompt_version,
     )
     logger.info(
         (
@@ -375,6 +393,13 @@ def run() -> None:
         toast_transition_penalty_threshold,
         toast_transition_penalty_scale,
         toast_transition_penalty_max,
+    )
+    logger.info(
+        "抽帧裁剪配置: auto_crop_black_borders=%s, black_threshold=%s, min_nonblack_ratio_per_line=%.4f, min_area_ratio=%.4f",
+        auto_crop_black_borders,
+        crop_black_threshold,
+        crop_min_nonblack_ratio_per_line,
+        crop_min_area_ratio,
     )
     logger.info("Prompt 构造方式: python_builder, requested_type=%s", task.task_type)
 

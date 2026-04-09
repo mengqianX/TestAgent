@@ -26,6 +26,73 @@ class ExtractedFrame:
 class FrameExtractor:
     """使用 OpenCV 抽取视频关键帧。"""
 
+    def __init__(
+        self,
+        auto_crop_black_borders: bool = True,
+        black_pixel_threshold: int = 16,
+        min_nonblack_ratio_per_line: float = 0.01,
+        min_crop_area_ratio: float = 0.10,
+    ) -> None:
+        """
+        初始化抽帧器。
+
+        Args:
+            auto_crop_black_borders: 是否自动裁剪四周黑边。
+            black_pixel_threshold: 低于该灰度值的像素视为黑色。
+            min_nonblack_ratio_per_line: 单行/列被视为有效内容的最小非黑像素占比。
+            min_crop_area_ratio: 裁剪后面积占原图最小比例，过小则回退到原图。
+        """
+        self.auto_crop_black_borders = auto_crop_black_borders
+        self.black_pixel_threshold = max(0, min(255, int(black_pixel_threshold)))
+        self.min_nonblack_ratio_per_line = max(0.0, min(1.0, float(min_nonblack_ratio_per_line)))
+        self.min_crop_area_ratio = max(0.0, min(1.0, float(min_crop_area_ratio)))
+
+    def _crop_black_borders(self, frame: cv2.typing.MatLike) -> cv2.typing.MatLike:
+        """
+        自动检测并裁剪画面四周黑边（letterbox/pillarbox）。
+
+        Returns:
+            MatLike: 裁剪后的帧；若未检测到可信裁剪区域则返回原图。
+        """
+        if frame is None or frame.size == 0:
+            return frame
+
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        non_black = gray > self.black_pixel_threshold
+        if not bool(non_black.any()):
+            return frame
+
+        h, w = gray.shape
+        row_non_black_ratio = non_black.mean(axis=1)
+        col_non_black_ratio = non_black.mean(axis=0)
+        row_threshold = self.min_nonblack_ratio_per_line
+        col_threshold = self.min_nonblack_ratio_per_line
+
+        top = 0
+        while top < h and row_non_black_ratio[top] < row_threshold:
+            top += 1
+        bottom = h - 1
+        while bottom >= 0 and row_non_black_ratio[bottom] < row_threshold:
+            bottom -= 1
+        left = 0
+        while left < w and col_non_black_ratio[left] < col_threshold:
+            left += 1
+        right = w - 1
+        while right >= 0 and col_non_black_ratio[right] < col_threshold:
+            right -= 1
+
+        if left >= right or top >= bottom:
+            return frame
+
+        crop_w = right - left + 1
+        crop_h = bottom - top + 1
+        crop_area_ratio = (crop_w * crop_h) / float(w * h)
+        if crop_area_ratio < self.min_crop_area_ratio:
+            # 防止误裁剪导致只保留很小区域。
+            return frame
+
+        return frame[top : bottom + 1, left : right + 1]
+
     def extract_frame(self, video_path: Path, timestamp_sec: float, output_path: Path) -> ExtractedFrame:
         """
         在指定时间戳抽取一帧并保存为图片。
@@ -72,6 +139,8 @@ class FrameExtractor:
             success, frame = cap.read()
             if not success or frame is None:
                 raise RuntimeError(f"无法在时间戳 {timestamp_sec} 秒读取帧")
+            if self.auto_crop_black_borders:
+                frame = self._crop_black_borders(frame)
             actual_frame_index: int = int(cap.get(cv2.CAP_PROP_POS_FRAMES)) - 1
             height: int = int(frame.shape[0])
             width: int = int(frame.shape[1])
@@ -159,6 +228,8 @@ class FrameExtractor:
                     current_ts += interval_sec
                     idx += 1
                     continue
+                if self.auto_crop_black_borders:
+                    frame = self._crop_black_borders(frame)
 
                 actual_frame_index: int = int(cap.get(cv2.CAP_PROP_POS_FRAMES)) - 1
                 height: int = int(frame.shape[0])

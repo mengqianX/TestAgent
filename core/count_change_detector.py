@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,6 +12,7 @@ import cv2
 
 from core.evaluator import VisionEvaluator
 from core.preprocessor import GuiPreprocessor
+from core.prompt_builders import build_prompt_for_type
 
 
 @dataclass
@@ -152,10 +152,6 @@ class CountChangeDetector:
         control_bounds.validate()
         detect_start = time.perf_counter()
 
-        task_intent = "检测目标控件触发后，其语义关联的数量指标是否按预期变化。"
-        hints_text = "、".join(metric_hints or []) if metric_hints else "无"
-        control_name = control_name_hint or "未提供"
-
         before_crop_path: Path | None = None
         after_crop_path: Path | None = None
         preprocess_structured: dict[str, Any] | None = None
@@ -201,27 +197,23 @@ class CountChangeDetector:
                 if self.debug:
                     self.logger.warning("count_change 前处理失败: %s", exc)
 
-        system_prompt = (
-            "你是资深 GUI 自动化测试专家，擅长控件语义识别与跨区域数字关联。"
-            "你将看到前后页面截图以及控件 bounds 信息。"
-            "请识别控件语义，并找到与其逻辑关联的数字指标（可不在控件附近）。"
-            "请严格输出 JSON，且只输出 JSON。"
-            "JSON 必须包含字段："
-            "semantic_target(str), linked_metric(str), before_value(int|null), after_value(int|null), "
-            "value_changed(bool), change_direction(str), expectation_met(bool), confidence(number), reason(str)。"
+        prompt_pack = build_prompt_for_type(
+            task_type="count_change",
+            context={
+                "expected_change": expected_change,
+                "metric_hints": metric_hints,
+                "control_name_hint": control_name_hint,
+                "control_bounds_x": control_bounds.x,
+                "control_bounds_y": control_bounds.y,
+                "control_bounds_width": control_bounds.width,
+                "control_bounds_height": control_bounds.height,
+                "preprocess_summary": preprocess_summary,
+                "preprocess_structured": preprocess_structured,
+            },
         )
-        user_prompt = (
-            f"任务意图：{task_intent}\n"
-            f"期望变化规则：{expected_change}（increase/decrease/any_change/no_change/any）\n"
-            f"控件名称提示：{control_name}\n"
-            f"指标关键词提示：{hints_text}\n"
-            f"控件 bounds：x={control_bounds.x}, y={control_bounds.y}, width={control_bounds.width}, "
-            f"height={control_bounds.height}\n"
-            f"前处理摘要：{preprocess_summary}\n"
-            f"前处理结构化证据(JSON)：{json.dumps(preprocess_structured, ensure_ascii=False) if preprocess_structured else '{}'}\n"
-            "请先识别该控件语义，再关联最相关数字指标，判断前后是否变化及方向。"
-            "请优先使用上述证据来定位需要关注的区域，但最终结论以图像事实为准。"
-        )
+        task_intent = prompt_pack.task_intent
+        system_prompt = prompt_pack.system_prompt
+        user_prompt = prompt_pack.user_prompt
 
         if self.debug:
             self.logger.info("CountChange 调试: task_id=%s, expected_change=%s", task_id, expected_change)
