@@ -1,0 +1,9 @@
+{
+  "task_id": "toast_baidumap-3",
+  "mode": "targeted",
+  "task_type": "toast",
+  "video_file": "toast-3-baidumap-设置语音包.mp4",
+  "sample_interval_sec": 0.5,
+  "start_sec": 0.0,
+  "expected_passed": true
+}

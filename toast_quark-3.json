@@ -1,0 +1,9 @@
+{
+  "task_id": "toast_quark-3",
+  "mode": "targeted",
+  "task_type": "toast",
+  "video_file": "toast-3-quark-收藏图片.mp4",
+  "sample_interval_sec": 0.5,
+  "start_sec": 0.0,
+  "expected_passed": true
+}
