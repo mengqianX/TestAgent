@@ -5,12 +5,13 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from pathlib import Path
 import time
 from typing import Any
 
 from core.count_change_detector import CountChangeDetector
 from core.evaluator import EvaluationResult, VisionEvaluator
+from core.list_refresh_detector import ListRefreshDetector
+from core.loading_detector import LoadingDetector
 from core.perception import ExtractedFrame
 from core.prompt_builders import build_prompt_for_type
 from core.toast_detector import ToastMessageDetector
@@ -41,7 +42,6 @@ class BaseTaskDetector(ABC):
         self,
         task: Any,
         sampled_frames: list[ExtractedFrame],
-        count_change_pair: tuple[Path, Path] | None,
     ) -> tuple[bool, str]:
         """判断当前输入是否满足 detector 执行前置条件。"""
 
@@ -50,7 +50,6 @@ class BaseTaskDetector(ABC):
         self,
         task: Any,
         sampled_frames: list[ExtractedFrame],
-        count_change_pair: tuple[Path, Path] | None,
     ) -> PipelineExecutionResult:
         """执行检测并返回统一结构结果。"""
 
@@ -71,27 +70,28 @@ class CountChangeTaskDetector(BaseTaskDetector):
         self,
         task: Any,
         sampled_frames: list[ExtractedFrame],
-        count_change_pair: tuple[Path, Path] | None,
     ) -> tuple[bool, str]:
-        del sampled_frames
         if task.control_bounds is None:
             return False, "缺少 control_bounds"
-        if count_change_pair is None:
-            return False, "缺少 before/after 图片对"
+        if len(sampled_frames) < 2:
+            return False, "抽帧数量不足（至少 2 帧）"
         return True, ""
 
     def run(
         self,
         task: Any,
         sampled_frames: list[ExtractedFrame],
-        count_change_pair: tuple[Path, Path] | None,
     ) -> PipelineExecutionResult:
         if task.control_bounds is None:
             raise ValueError("task_type=count_change 时必须提供 control_bounds")
-        if count_change_pair is None:
-            raise ValueError("count_change 模式缺少输入图片对")
+        if len(sampled_frames) < 2:
+            raise ValueError("count_change 模式至少需要 2 帧输入")
 
-        before_image_path, after_image_path = count_change_pair
+        # 统一输入后，count_change 始终从帧序列中取首尾帧作为前后对比。
+        before_meta = sampled_frames[0]
+        after_meta = sampled_frames[-1]
+        before_image_path = before_meta.image_path
+        after_image_path = after_meta.image_path
         pair_task_id = f"{task.task_id}_pair_0000"
         segment_results: list[dict[str, Any]] = []
         resolved_task_intent = ""
@@ -113,8 +113,8 @@ class CountChangeTaskDetector(BaseTaskDetector):
                 {
                     "segment_index": 0,
                     "segment_task_id": pair_task_id,
-                    "before_timestamp_sec": None,
-                    "after_timestamp_sec": None,
+                    "before_timestamp_sec": before_meta.timestamp_sec,
+                    "after_timestamp_sec": after_meta.timestamp_sec,
                     "before_image": str(before_image_path),
                     "after_image": str(after_image_path),
                     "bug_detected": count_result.bug_detected,
@@ -139,8 +139,8 @@ class CountChangeTaskDetector(BaseTaskDetector):
                 {
                     "segment_index": 0,
                     "segment_task_id": pair_task_id,
-                    "before_timestamp_sec": None,
-                    "after_timestamp_sec": None,
+                    "before_timestamp_sec": before_meta.timestamp_sec,
+                    "after_timestamp_sec": after_meta.timestamp_sec,
                     "before_image": str(before_image_path),
                     "after_image": str(after_image_path),
                     "error": str(exc),
@@ -171,9 +171,8 @@ class ToastTaskDetector(BaseTaskDetector):
         self,
         task: Any,
         sampled_frames: list[ExtractedFrame],
-        count_change_pair: tuple[Path, Path] | None,
     ) -> tuple[bool, str]:
-        del task, count_change_pair
+        del task
         if len(sampled_frames) < 2:
             return False, "抽帧数量不足（至少 2 帧）"
         return True, ""
@@ -182,9 +181,7 @@ class ToastTaskDetector(BaseTaskDetector):
         self,
         task: Any,
         sampled_frames: list[ExtractedFrame],
-        count_change_pair: tuple[Path, Path] | None,
     ) -> PipelineExecutionResult:
-        del count_change_pair
         toast_result = self.detector.detect(
             sampled_frames=sampled_frames,
             task_id=task.task_id,
@@ -226,6 +223,105 @@ class ToastTaskDetector(BaseTaskDetector):
         )
 
 
+class ListRefreshTaskDetector(BaseTaskDetector):
+    """list_refresh 任务检测器。"""
+
+    name = "list_refresh_detector"
+
+    def __init__(self, detector: ListRefreshDetector, logger: logging.Logger | None = None) -> None:
+        self.detector = detector
+        self.logger = logger or logging.getLogger("vision_gui_agent")
+
+    def can_handle(self, task_type: str) -> bool:
+        return task_type == "list_refresh"
+
+    def is_applicable(
+        self,
+        task: Any,
+        sampled_frames: list[ExtractedFrame],
+    ) -> tuple[bool, str]:
+        if task.control_bounds is None:
+            return False, "缺少 control_bounds"
+        if len(sampled_frames) < 2:
+            return False, "抽帧数量不足（至少 2 帧）"
+        return True, ""
+
+    def run(
+        self,
+        task: Any,
+        sampled_frames: list[ExtractedFrame],
+    ) -> PipelineExecutionResult:
+        if task.control_bounds is None:
+            raise ValueError("task_type=list_refresh 时必须提供 control_bounds")
+        if len(sampled_frames) < 2:
+            raise ValueError("list_refresh 模式至少需要 2 帧输入")
+
+        before_meta = sampled_frames[0]
+        after_meta = sampled_frames[-1]
+        before_image_path = before_meta.image_path
+        after_image_path = after_meta.image_path
+        pair_task_id = f"{task.task_id}_pair_0000"
+
+        segment_results: list[dict[str, Any]] = []
+        resolved_task_intent = ""
+        video_bug_detected = False
+        try:
+            list_result = self.detector.detect(
+                before_image=before_image_path,
+                after_image=after_image_path,
+                control_bounds=task.control_bounds,
+                expected_list_refresh=task.expected_list_refresh,
+                control_name_hint=task.control_name_hint,
+                task_id=pair_task_id,
+            )
+            resolved_task_intent = list_result.task_intent
+            video_bug_detected = list_result.bug_detected
+            segment_results.append(
+                {
+                    "segment_index": 0,
+                    "segment_task_id": pair_task_id,
+                    "before_timestamp_sec": before_meta.timestamp_sec,
+                    "after_timestamp_sec": after_meta.timestamp_sec,
+                    "before_image": str(before_image_path),
+                    "after_image": str(after_image_path),
+                    "bug_detected": list_result.bug_detected,
+                    "reason": list_result.reason,
+                    "raw_model_response": list_result.raw_response,
+                    "selected_prompt_type": self.name,
+                    "list_refreshed": list_result.list_refreshed,
+                    "target_region": list_result.target_region,
+                    "target_region_box": list_result.target_region_box,
+                    "roi_mean_abs_diff": list_result.roi_mean_abs_diff,
+                    "roi_changed_pixel_ratio": list_result.roi_changed_pixel_ratio,
+                    "expectation_met": list_result.expectation_met,
+                    "confidence": list_result.confidence,
+                    "timing": list_result.timing,
+                    "preprocess_evidence": list_result.preprocess_evidence,
+                }
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            self.logger.exception("图片对评估失败: %s | 错误: %s", pair_task_id, exc)
+            segment_results.append(
+                {
+                    "segment_index": 0,
+                    "segment_task_id": pair_task_id,
+                    "before_timestamp_sec": before_meta.timestamp_sec,
+                    "after_timestamp_sec": after_meta.timestamp_sec,
+                    "before_image": str(before_image_path),
+                    "after_image": str(after_image_path),
+                    "error": str(exc),
+                }
+            )
+
+        return PipelineExecutionResult(
+            selected_detector=self.name,
+            resolved_task_intent=resolved_task_intent,
+            video_bug_detected=video_bug_detected,
+            segment_results=segment_results,
+            detector_runs=[],
+        )
+
+
 class FramePairTaskDetector(BaseTaskDetector):
     """通用相邻帧检测器（默认兜底）。"""
 
@@ -243,9 +339,8 @@ class FramePairTaskDetector(BaseTaskDetector):
         self,
         task: Any,
         sampled_frames: list[ExtractedFrame],
-        count_change_pair: tuple[Path, Path] | None,
     ) -> tuple[bool, str]:
-        del task, count_change_pair
+        del task
         if len(sampled_frames) < 2:
             return False, "抽帧数量不足（至少 2 帧）"
         return True, ""
@@ -254,9 +349,7 @@ class FramePairTaskDetector(BaseTaskDetector):
         self,
         task: Any,
         sampled_frames: list[ExtractedFrame],
-        count_change_pair: tuple[Path, Path] | None,
     ) -> PipelineExecutionResult:
-        del count_change_pair
         segment_results: list[dict[str, Any]] = []
         video_bug_detected = False
         resolved_task_intent = ""
@@ -328,6 +421,65 @@ class FramePairTaskDetector(BaseTaskDetector):
         )
 
 
+class LoadingTaskDetector(BaseTaskDetector):
+    """loading 专用检测器（CV-first + VLM-fallback）。"""
+
+    name = "loading_detector"
+
+    def __init__(self, detector: LoadingDetector) -> None:
+        self.detector = detector
+
+    def can_handle(self, task_type: str) -> bool:
+        return task_type == "loading"
+
+    def is_applicable(
+        self,
+        task: Any,
+        sampled_frames: list[ExtractedFrame],
+    ) -> tuple[bool, str]:
+        del task
+        if len(sampled_frames) < 2:
+            return False, "抽帧数量不足（至少 2 帧）"
+        return True, ""
+
+    def run(
+        self,
+        task: Any,
+        sampled_frames: list[ExtractedFrame],
+    ) -> PipelineExecutionResult:
+        loading_result = self.detector.detect(
+            sampled_frames=sampled_frames,
+            task_id=task.task_id,
+        )
+        segment_results = [
+            {
+                "segment_index": 0,
+                "segment_task_id": f"{task.task_id}_loading_full",
+                "before_timestamp_sec": sampled_frames[0].timestamp_sec if sampled_frames else None,
+                "after_timestamp_sec": sampled_frames[-1].timestamp_sec if sampled_frames else None,
+                "before_image": str(sampled_frames[0].image_path) if sampled_frames else None,
+                "after_image": str(sampled_frames[-1].image_path) if sampled_frames else None,
+                "bug_detected": loading_result.bug_detected,
+                "reason": loading_result.reason,
+                "decision_basis": loading_result.decision_basis,
+                "anomaly_type": loading_result.anomaly_type,
+                "anomaly_types": loading_result.anomaly_types,
+                "raw_model_response": loading_result.raw_response,
+                "selected_prompt_type": "loading",
+                "decision_source": loading_result.decision_source,
+                "cv_metrics": loading_result.cv_metrics,
+                "timing": loading_result.timing,
+            }
+        ]
+        return PipelineExecutionResult(
+            selected_detector=self.name,
+            resolved_task_intent=loading_result.task_intent,
+            video_bug_detected=loading_result.bug_detected,
+            segment_results=segment_results,
+            detector_runs=[],
+        )
+
+
 class PipelineOrchestrator:
     """任务编排器：按 task_type 匹配检测器并执行。"""
 
@@ -341,7 +493,6 @@ class PipelineOrchestrator:
         self,
         task: Any,
         sampled_frames: list[ExtractedFrame],
-        count_change_pair: tuple[Path, Path] | None,
     ) -> PipelineExecutionResult:
         mode = str(getattr(task, "mode", "full") or "full").strip().lower()
         task_type_hint = str(getattr(task, "task_type", "") or "").strip().lower()
@@ -393,7 +544,7 @@ class PipelineOrchestrator:
 
         for detector in candidates:
             self.logger.info("Detector 开始评估适用性: %s", detector.name)
-            applicable, skip_reason = detector.is_applicable(task, sampled_frames, count_change_pair)
+            applicable, skip_reason = detector.is_applicable(task, sampled_frames)
             if not applicable:
                 self.logger.info("Detector 跳过: %s, reason=%s", detector.name, skip_reason)
                 detector_runs.append(
@@ -408,7 +559,7 @@ class PipelineOrchestrator:
             try:
                 run_start = time.perf_counter()
                 self.logger.info("Detector 开始执行: %s", detector.name)
-                run_result = detector.run(task, sampled_frames, count_change_pair)
+                run_result = detector.run(task, sampled_frames)
                 run_elapsed_ms = (time.perf_counter() - run_start) * 1000.0
                 self.logger.info("Detector 执行完成: %s, elapsed=%.2fms", detector.name, run_elapsed_ms)
             except Exception as exc:  # pylint: disable=broad-except

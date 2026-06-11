@@ -1,0 +1,9 @@
+{
+  "task_id": "general_anki-1",
+  "mode": "targeted",
+  "task_type": "general",
+  "video_file": "toast-1-anki-撤销卡片.mp4",
+  "sample_interval_sec": 0.5,
+  "start_sec": 0.0,
+  "expected_passed": true
+}

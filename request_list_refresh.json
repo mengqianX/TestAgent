@@ -1,0 +1,14 @@
+{
+  "task_id": "list_refresh_demo",
+  "task_type": "list_refresh",
+  "before_image": "data/my_api_run/frames/auto_scan_demo_t2.00_idx0002.png",
+  "after_image": "data/my_api_run/frames/auto_scan_demo_t3.00_idx0003.png",
+  "control_bounds": {
+    "x": 280,
+    "y": 120,
+    "width": 180,
+    "height": 72
+  },
+  "expected_list_refresh": true,
+  "control_name_hint": "刷新按钮"
+}

@@ -68,12 +68,10 @@ def _resolve_task_pass(report: dict[str, Any]) -> tuple[bool, str]:
             return (not bool(seg.get("bug_detected", False))), "toast.bug_detected"
         if task_type == "count_change" and seg.get("detector") == "count_change_detector":
             return (not bool(seg.get("bug_detected", False))), "count_change.bug_detected"
+        if task_type == "list_refresh" and seg.get("detector") == "list_refresh_detector":
+            return (not bool(seg.get("bug_detected", False))), "list_refresh.bug_detected"
     bug_detected = bool(report.get("video_level_result", {}).get("bug_detected", False))
     return (not bug_detected), "video_level_result.bug_detected"
-
-
-def _collect_toast_case_paths() -> list[Path]:
-    return sorted(REPO_ROOT.glob("toast_*.json"), key=lambda p: p.name)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -101,7 +99,6 @@ def _generate_recent_stats_after_session():
         print(f"[WARN] 自动生成统计表失败: {exc}")
 
 
-@pytest.mark.parametrize("case_path", _collect_toast_case_paths(), ids=lambda p: p.name)
 def test_toast_case_expected_passed_matches_model_output(case_path: Path):
     """
     回归测试核心断言：

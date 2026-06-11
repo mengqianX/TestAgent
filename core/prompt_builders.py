@@ -57,7 +57,9 @@ def _build_loading_prompt(context: dict[str, Any]) -> PromptPack:
     system_prompt = (
         "你是资深移动端 GUI 质量专家，专门识别加载状态异常。"
         "请严格输出 JSON，且只输出 JSON，不要包含任何额外文本。"
-        "JSON 必须包含字段：bug_detected(bool)、reason(str)。"
+        "JSON 必须包含字段："
+        "bug_detected(bool)、reason(str)、decision_basis(str)、"
+        "anomaly_type(str: no_response|black_screen|white_screen|load_failed|long_loading|none|unknown)。"
     )
     user_prompt = (
         "任务类型：loading（长时间加载检测）\n"
@@ -67,10 +69,39 @@ def _build_loading_prompt(context: dict[str, Any]) -> PromptPack:
         "1) 加载指示器长期不消失\n"
         "2) 页面内容长时间不变化，疑似卡死\n"
         "3) 明显转圈但无结果反馈\n"
-        "若符合上述异常，bug_detected=true；否则 false。"
+        "4) 出现黑屏或白屏\n"
+        "5) 页面提示加载失败、请求失败、网络异常等失败信息\n"
+        "请输出异常类型 anomaly_type，并在 decision_basis 中给出判定依据。"
+        "若无异常，anomaly_type=none 且 bug_detected=false。"
     )
     return PromptPack(
         selected_prompt_type="loading",
+        task_intent=task_intent,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+    )
+
+
+def build_loading_failure_probe_prompt(context: dict[str, Any]) -> PromptPack:
+    """loading 失败文案探测提示词（用于 detector 内部子步骤）。"""
+    task_intent = "识别当前候选帧是否出现加载失败相关提示或失败弹窗。"
+    system_prompt = (
+        "你是移动端 GUI 失败态识别专家。"
+        "请根据前后截图识别是否出现加载失败相关文案或弹窗。"
+        "请严格输出 JSON，且只输出 JSON。"
+        "JSON 必须包含字段："
+        "load_failed(bool), failure_type(str), evidence_text(str), confidence(number,0~1), reason(str)。"
+        "failure_type 取值建议：network_error|request_failed|timeout|permission_denied|unknown|none。"
+    )
+    user_prompt = (
+        "任务类型：loading_failure_probe\n"
+        f"任务意图：{task_intent}\n"
+        f"片段区间：{context['before_timestamp_sec']:.2f}s -> {context['after_timestamp_sec']:.2f}s\n"
+        "请重点检查候选帧是否存在如下语义：加载失败、请求失败、网络异常、超时、重试提示、错误弹窗。"
+        "若未见明确失败语义，load_failed=false，failure_type=none。"
+    )
+    return PromptPack(
+        selected_prompt_type="loading_failure_probe",
         task_intent=task_intent,
         system_prompt=system_prompt,
         user_prompt=user_prompt,
@@ -171,11 +202,45 @@ def _build_count_change_prompt(context: dict[str, Any]) -> PromptPack:
     )
 
 
+def _build_list_refresh_prompt(context: dict[str, Any]) -> PromptPack:
+    """列表刷新检测提示词。"""
+    task_intent = "检测控件触发后，目标内容列表区域是否发生刷新变化。"
+    preprocess_structured = context.get("preprocess_structured")
+    preprocess_structured_text = (
+        json.dumps(preprocess_structured, ensure_ascii=False) if preprocess_structured else "{}"
+    )
+    system_prompt = (
+        "你是资深 GUI 自动化测试专家，擅长判断内容列表是否在交互后完成刷新。"
+        "你将看到前后页面截图、控件 bounds 以及列表区域变化证据。"
+        "请严格输出 JSON，且只输出 JSON。"
+        "JSON 必须包含字段："
+        "list_refreshed(bool), target_region(str), expectation_met(bool), confidence(number), reason(str)。"
+    )
+    user_prompt = (
+        f"任务意图：{task_intent}\n"
+        f"期望结果：expected_list_refresh={context['expected_list_refresh']}\n"
+        f"控件名称提示：{context.get('control_name_hint') or '未提供'}\n"
+        f"控件 bounds：x={context['control_bounds_x']}, y={context['control_bounds_y']}, "
+        f"width={context['control_bounds_width']}, height={context['control_bounds_height']}\n"
+        f"前处理摘要：{context.get('preprocess_summary') or '无'}\n"
+        f"前处理结构化证据(JSON)：{preprocess_structured_text}\n"
+        "请重点判断控件响应后，列表内容是否出现可见更新（如条目顺序、文本、封面、时间戳、计数等变化）。"
+        "若仅出现轻微动画或非列表区域变化，不应判定为列表刷新。"
+    )
+    return PromptPack(
+        selected_prompt_type="list_refresh",
+        task_intent=task_intent,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+    )
+
+
 PROMPT_BUILDERS: dict[str, Callable[[dict[str, Any]], PromptPack]] = {
     "general": _build_general_prompt,
     "loading": _build_loading_prompt,
     "toast": _build_toast_prompt,
     "count_change": _build_count_change_prompt,
+    "list_refresh": _build_list_refresh_prompt,
 }
 
 

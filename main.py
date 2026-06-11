@@ -15,9 +15,13 @@ from dotenv import load_dotenv  # type: ignore[reportMissingImports]
 
 from core.count_change_detector import ControlBounds, CountChangeDetector
 from core.evaluator import VisionEvaluator
+from core.list_refresh_detector import ListRefreshDetector
+from core.loading_detector import LoadingDetector
 from core.pipeline import (
     CountChangeTaskDetector,
     FramePairTaskDetector,
+    ListRefreshTaskDetector,
+    LoadingTaskDetector,
     PipelineOrchestrator,
     ToastTaskDetector,
 )
@@ -47,6 +51,7 @@ class VideoTaskInput:
     control_name_hint: str | None = None
     source_base_dir: Path | None = None
     expected_toast_keywords: list[str] | None = None
+    expected_list_refresh: bool = True
 
 
 @dataclass
@@ -96,6 +101,18 @@ def _resolve_expected_change(payload: dict[str, Any]) -> str:
     return "any_change"
 
 
+def _resolve_expected_list_refresh(payload: dict[str, Any]) -> bool:
+    """
+    兼容 expected_list_refresh 与 expected_passed 两种写法。
+    expected_passed=True -> 期望列表刷新；False -> 期望不刷新。
+    """
+    if payload.get("expected_list_refresh") is not None:
+        return bool(payload["expected_list_refresh"])
+    if payload.get("expected_passed") is not None:
+        return bool(payload["expected_passed"])
+    return True
+
+
 def _parse_bounds(payload: dict[str, Any]) -> ControlBounds | None:
     """
     兼容两种 bounds 输入：
@@ -132,7 +149,7 @@ def parse_task_from_payload(payload: dict[str, Any], base_dir: Path | None = Non
     after_image = payload.get("after_image", payload.get("screenshot_b"))
     missing: list[str] = []
     if mode == "targeted":
-        if task_type == "count_change":
+        if task_type in {"count_change", "list_refresh"}:
             if before_image in ("", None):
                 missing.append("before_image|screenshot_a")
             if after_image in ("", None):
@@ -179,6 +196,7 @@ def parse_task_from_payload(payload: dict[str, Any], base_dir: Path | None = Non
             if payload.get("expected_toast_keywords")
             else ([str(x) for x in payload.get("toast_keywords", [])] if payload.get("toast_keywords") else None)
         ),
+        expected_list_refresh=_resolve_expected_list_refresh(payload),
     )
 
 
@@ -205,6 +223,39 @@ def save_report(report: dict[str, Any], output_dir: Path) -> Path:
     output_path = output_dir / filename
     output_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     return output_path
+
+
+def _build_frames_from_image_pair(
+    before_image_path: Path,
+    after_image_path: Path,
+) -> list[ExtractedFrame]:
+    """
+    将 before/after 图片对归一为两帧序列，统一后续 detector 输入。
+    """
+    return [
+        ExtractedFrame(
+            image_path=before_image_path,
+            timestamp_sec=0.0,
+            fps=0.0,
+            frame_count=2,
+            duration_sec=0.0,
+            target_frame_index=0,
+            actual_frame_index=0,
+            width=0,
+            height=0,
+        ),
+        ExtractedFrame(
+            image_path=after_image_path,
+            timestamp_sec=1.0,
+            fps=0.0,
+            frame_count=2,
+            duration_sec=0.0,
+            target_frame_index=1,
+            actual_frame_index=1,
+            width=0,
+            height=0,
+        ),
+    ]
 
 
 def run() -> None:
@@ -270,6 +321,9 @@ def run() -> None:
     toast_transition_penalty_threshold = float(os.getenv("VGA_TOAST_TRANSITION_PENALTY_THRESHOLD", "0.08"))
     toast_transition_penalty_scale = float(os.getenv("VGA_TOAST_TRANSITION_PENALTY_SCALE", "1.5"))
     toast_transition_penalty_max = float(os.getenv("VGA_TOAST_TRANSITION_PENALTY_MAX", "0.45"))
+    loading_failure_probe_top_k = int(os.getenv("VGA_LOADING_FAILURE_PROBE_TOP_K", "5"))
+    loading_failure_probe_min_cv_score = float(os.getenv("VGA_LOADING_FAILURE_PROBE_MIN_CV_SCORE", "0.02"))
+    loading_failure_probe_force_keep = int(os.getenv("VGA_LOADING_FAILURE_PROBE_FORCE_KEEP", "1"))
     auto_crop_black_borders = os.getenv("VGA_AUTO_CROP_BLACK_BORDERS", "1").strip() in {
         "1",
         "true",
@@ -327,6 +381,12 @@ def run() -> None:
         preprocessor=preprocessor,
         enable_preprocess=enable_preprocess,
     )
+    list_refresh_detector = ListRefreshDetector(
+        evaluator=evaluator,
+        logger=logger,
+        debug=debug_enabled,
+        crops_dir=debug_dir / "list_refresh_crops",
+    )
     toast_detector = ToastMessageDetector(
         evaluator=evaluator,
         logger=logger,
@@ -335,6 +395,14 @@ def run() -> None:
         enable_preprocess=enable_preprocess,
         top_k_candidates=toast_top_k_candidates,
         prompt_version=toast_prompt_version,
+    )
+    loading_detector = LoadingDetector(
+        evaluator=evaluator,
+        logger=logger,
+        debug=debug_enabled,
+        failure_probe_top_k=loading_failure_probe_top_k,
+        failure_probe_min_cv_score=loading_failure_probe_min_cv_score,
+        failure_probe_force_keep=loading_failure_probe_force_keep,
     )
     extractor = FrameExtractor(
         auto_crop_black_borders=auto_crop_black_borders,
@@ -353,12 +421,16 @@ def run() -> None:
     logger.info(
         (
             "前处理开关: enable_preprocess=%s, max_extra_images=%s, "
-            "toast_top_k_candidates=%s, toast_prompt_version=%s"
+            "toast_top_k_candidates=%s, toast_prompt_version=%s, "
+            "loading_failure_probe_top_k=%s, loading_failure_probe_min_cv_score=%.4f, loading_failure_probe_force_keep=%s"
         ),
         enable_preprocess,
         preprocess_max_images,
         toast_top_k_candidates,
         toast_prompt_version,
+        loading_failure_probe_top_k,
+        loading_failure_probe_min_cv_score,
+        loading_failure_probe_force_keep,
     )
     logger.info(
         (
@@ -404,24 +476,7 @@ def run() -> None:
     logger.info("Prompt 构造方式: python_builder, requested_type=%s", task.task_type)
 
     sampled_frames: list[ExtractedFrame] = []
-    count_change_pair: tuple[Path, Path] | None = None
     frame_extract_elapsed_ms = 0.0
-    if task.before_image and task.after_image:
-        before_image_path = Path(task.before_image or "")
-        after_image_path = Path(task.after_image or "")
-        if not before_image_path.is_absolute():
-            base = task.source_base_dir or root_dir
-            before_image_path = (base / before_image_path).resolve()
-        if not after_image_path.is_absolute():
-            base = task.source_base_dir or root_dir
-            after_image_path = (base / after_image_path).resolve()
-        if not before_image_path.exists() or not after_image_path.exists():
-            raise FileNotFoundError(
-                f"count_change 输入图片不存在: before={before_image_path}, after={after_image_path}"
-            )
-        count_change_pair = (before_image_path, after_image_path)
-        logger.info("输入图片对: before=%s, after=%s", before_image_path, after_image_path)
-
     if task.video_file:
         t_frame_start = time.perf_counter()
         video_path = Path(task.video_file)
@@ -439,11 +494,31 @@ def run() -> None:
         )
         frame_extract_elapsed_ms = (time.perf_counter() - t_frame_start) * 1000.0
         logger.info("抽帧完成: 共 %s 帧", len(sampled_frames))
+    elif task.before_image and task.after_image:
+        before_image_path = Path(task.before_image or "")
+        after_image_path = Path(task.after_image or "")
+        if not before_image_path.is_absolute():
+            base = task.source_base_dir or root_dir
+            before_image_path = (base / before_image_path).resolve()
+        if not after_image_path.is_absolute():
+            base = task.source_base_dir or root_dir
+            after_image_path = (base / after_image_path).resolve()
+        if not before_image_path.exists() or not after_image_path.exists():
+            raise FileNotFoundError(
+                f"count_change 输入图片不存在: before={before_image_path}, after={after_image_path}"
+            )
+        sampled_frames = _build_frames_from_image_pair(
+            before_image_path=before_image_path,
+            after_image_path=after_image_path,
+        )
+        logger.info("输入图片对: before=%s, after=%s", before_image_path, after_image_path)
 
     orchestrator = PipelineOrchestrator(
         detectors=[
             CountChangeTaskDetector(detector=count_change_detector, logger=logger),
+            ListRefreshTaskDetector(detector=list_refresh_detector, logger=logger),
             ToastTaskDetector(detector=toast_detector),
+            LoadingTaskDetector(detector=loading_detector),
             FramePairTaskDetector(evaluator=evaluator, logger=logger),
         ]
     )
@@ -451,7 +526,6 @@ def run() -> None:
     pipeline_result = orchestrator.run(
         task=task,
         sampled_frames=sampled_frames,
-        count_change_pair=count_change_pair,
     )
     pipeline_elapsed_ms = (time.perf_counter() - t_pipeline_start) * 1000.0
     segment_results: list[dict[str, Any]] = pipeline_result.segment_results
@@ -489,6 +563,7 @@ def run() -> None:
             "metric_hints": task.metric_hints,
             "control_name_hint": task.control_name_hint,
             "expected_toast_keywords": task.expected_toast_keywords,
+            "expected_list_refresh": task.expected_list_refresh,
         },
         "video_level_result": {
             "bug_detected": video_bug_detected,
@@ -512,29 +587,18 @@ def run() -> None:
                 "total_elapsed_ms": round((time.perf_counter() - run_start) * 1000.0, 2),
             },
         },
-        "sampled_frames": (
-            [
-                {
-                    "image_path": str(frame.image_path),
-                    "timestamp_sec": frame.timestamp_sec,
-                    "target_frame_index": frame.target_frame_index,
-                    "actual_frame_index": frame.actual_frame_index,
-                    "fps": frame.fps,
-                    "width": frame.width,
-                    "height": frame.height,
-                }
-                for frame in sampled_frames
-            ]
-            if sampled_frames
-            else (
-                [
-                    {"image_path": str(count_change_pair[0]), "timestamp_sec": None},
-                    {"image_path": str(count_change_pair[1]), "timestamp_sec": None},
-                ]
-                if count_change_pair is not None
-                else []
-            )
-        ),
+        "sampled_frames": [
+            {
+                "image_path": str(frame.image_path),
+                "timestamp_sec": frame.timestamp_sec,
+                "target_frame_index": frame.target_frame_index,
+                "actual_frame_index": frame.actual_frame_index,
+                "fps": frame.fps,
+                "width": frame.width,
+                "height": frame.height,
+            }
+            for frame in sampled_frames
+        ],
         "segment_results": segment_results,
     }
     report_path = save_report(report=report, output_dir=reports_dir)

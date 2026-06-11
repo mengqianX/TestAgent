@@ -1,0 +1,9 @@
+{
+  "task_id": "general_omninote-1",
+  "mode": "targeted",
+  "task_type": "general",
+  "video_file": "toast-1-omninote-笔记回收还原.mp4",
+  "sample_interval_sec": 0.5,
+  "start_sec": 0.0,
+  "expected_passed": true
+}

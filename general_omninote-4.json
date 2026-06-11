@@ -1,0 +1,9 @@
+{
+  "task_id": "general_omninote-4",
+  "mode": "targeted",
+  "task_type": "general",
+  "video_file": "toast-4-omninote-笔记归档（多toast.mp4",
+  "sample_interval_sec": 0.5,
+  "start_sec": 0.0,
+  "expected_passed": true
+}
