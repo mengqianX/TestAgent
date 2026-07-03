@@ -1,0 +1,9 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "video_file": "../abnormal/screen-load-jd-abnormal-4.mp4",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "expected_passed": false
+}
