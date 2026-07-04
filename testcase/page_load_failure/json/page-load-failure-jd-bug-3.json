@@ -5,5 +5,6 @@
   "video_file": "../abnormal/screen-load-jd-abnormal-3.mp4",
   "sample_interval_sec": 1.0,
   "start_sec": 0.0,
+  "bounds": [558, 1208, 774, 1577],
   "expected_passed": false
 }

@@ -5,5 +5,6 @@
   "video_file": "../normal/no-response-zhihu-normal-4.mp4",
   "sample_interval_sec": 1.0,
   "start_sec": 0.0,
+  "bounds": [816, 408, 1032, 498],
   "expected_passed": true
 }
