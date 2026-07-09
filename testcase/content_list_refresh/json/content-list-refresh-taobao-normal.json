@@ -1,0 +1,11 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "screenshot_a": "../normal/content-list-refresh-taobao-normal-before.png",
+  "screenshot_b": "../normal/content-list-refresh-taobao-normal-after.png",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [172, 705, 315, 759],
+  "expected_passed": true
+}

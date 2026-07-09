@@ -1,0 +1,11 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "screenshot_a": "../normal/content-list-refresh-jingdong-normal-before.png",
+  "screenshot_b": "../normal/content-list-refresh-jingdong-normal-after.png",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [60, 915, 204, 957],
+  "expected_passed": true
+}
