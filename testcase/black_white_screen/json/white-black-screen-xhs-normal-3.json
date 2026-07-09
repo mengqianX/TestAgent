@@ -1,0 +1,10 @@
+{
+  "task_id": "white-black-screen-xhs-normal-3",
+  "mode": "targeted",
+  "task_type": "loading",
+  "video_file": "../normal/white-black-screen-xhs-normal-3.mp4",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [20, 1080, 340, 1480],
+  "expected_passed": true
+}

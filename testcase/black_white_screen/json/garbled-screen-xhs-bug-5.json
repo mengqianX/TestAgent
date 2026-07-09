@@ -1,0 +1,10 @@
+{
+  "task_id": "garbled-screen-xhs-bug-5",
+  "mode": "targeted",
+  "task_type": "loading",
+  "video_file": "../bug/garbled-screen-xhs-bug-5.mp4",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [],
+  "expected_passed": false
+}
