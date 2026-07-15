@@ -1,7 +1,7 @@
 {
-  "task_id": "",
+  "task_id": "video-play-weibo-normal",
   "mode": "targeted",
-  "task_type": "",
+  "task_type": "video_play",
   "video_file": "../normal/video-play-weibo-normal.mp4",
   "sample_interval_sec": 1.0,
   "start_sec": 0.0,

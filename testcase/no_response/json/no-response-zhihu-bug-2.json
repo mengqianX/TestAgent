@@ -4,7 +4,7 @@
   "task_type": "",
   "video_file": "../abnormal/no-response-zhihu-abnormal-2.mp4",
   "sample_interval_sec": 1.0,
-  "start_sec": 0.0,
+  "start_sec": 1.0,
   "bounds": [48, 120, 1032, 234],
   "expected_passed": false
 }

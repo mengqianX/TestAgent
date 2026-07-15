@@ -1,8 +1,8 @@
 {
-  "task_id": "toast_omninote-2-f",
+  "task_id": "toast_omninote-bug-1",
   "mode": "targeted",
   "task_type": "toast",
-  "video_file": "toast-2-omninote-注入错误.mp4",
+  "video_file": "../abnormal/toast-omninote-bug-1.mp4",
   "sample_interval_sec": 0.5,
   "start_sec": 0.0,
   "expected_passed": false
