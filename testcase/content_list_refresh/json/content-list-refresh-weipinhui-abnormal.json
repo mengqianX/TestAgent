@@ -1,0 +1,11 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "screenshot_a": "../abnormal/content-list-refresh-weipinhui-abnormal-before.png",
+  "screenshot_b": "../abnormal/content-list-refresh-weipinhui-abnormal-after.png",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [248, 483, 427, 564],
+  "expected_passed": false
+}

@@ -1,0 +1,11 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "screenshot_a": "../normal/content-list-refresh-douyin-normal-before.png",
+  "screenshot_b": "../normal/content-list-refresh-douyin-normal-after.png",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [222, 406, 450, 489],
+  "expected_passed": true
+}

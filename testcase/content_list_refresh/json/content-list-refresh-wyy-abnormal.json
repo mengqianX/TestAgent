@@ -1,0 +1,11 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "screenshot_a": "../abnormal/content-list-refresh-wyy-abnormal-before.png",
+  "screenshot_b": "../abnormal/content-list-refresh-wyy-abnormal-after.png",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [186, 453, 372, 510],
+  "expected_passed": false
+}

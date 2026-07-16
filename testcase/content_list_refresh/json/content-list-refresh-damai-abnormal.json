@@ -1,0 +1,11 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "screenshot_a": "../abnormal/content-list-refresh-damai-abnormal-before.png",
+  "screenshot_b": "../abnormal/content-list-refresh-damai-abnormal-after.png",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [339, 1218, 645, 1320],
+  "expected_passed": false
+}

@@ -1,0 +1,11 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "screenshot_a": "../abnormal/content-list-refresh-tomato-abnormal-before.png",
+  "screenshot_b": "../abnormal/content-list-refresh-tomato-abnormal-after.png",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [222, 368, 516, 458],
+  "expected_passed": false
+}

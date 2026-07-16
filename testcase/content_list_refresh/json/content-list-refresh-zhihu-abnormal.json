@@ -1,0 +1,11 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "screenshot_a": "../abnormal/content-list-refresh-zhihu-abnormal-before.png",
+  "screenshot_b": "../abnormal/content-list-refresh-zhihu-abnormal-after.png",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [357, 266, 507, 362],
+  "expected_passed": false
+}

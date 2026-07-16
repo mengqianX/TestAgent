@@ -1,0 +1,21 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="networkx" />
+          <option value="uiautomator2" />
+          <option value="androguard" />
+          <option value="attrs" />
+          <option value="opencv-python" />
+          <option value="coloredlogs" />
+          <option value="hypothesis" />
+          <option value="hmdriver2" />
+          <option value="pyyaml" />
+          <option value="rtree" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>

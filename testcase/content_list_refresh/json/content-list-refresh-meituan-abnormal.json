@@ -1,0 +1,11 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "screenshot_a": "../abnormal/content-list-refresh-meituan-abnormal-before.png",
+  "screenshot_b": "../abnormal/content-list-refresh-meituan-abnormal-after.png",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [552, 481, 786, 565],
+  "expected_passed": false
+}

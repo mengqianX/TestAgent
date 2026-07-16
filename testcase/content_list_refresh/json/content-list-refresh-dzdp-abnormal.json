@@ -1,0 +1,11 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "screenshot_a": "../abnormal/content-list-refresh-dzdp-abnormal-before.png",
+  "screenshot_b": "../abnormal/content-list-refresh-dzdp-abnormal-after.png",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [661, 474, 859, 552],
+  "expected_passed": false
+}

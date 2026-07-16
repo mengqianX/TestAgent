@@ -1,0 +1,11 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "screenshot_a": "../abnormal/content-list-refresh-amap-abnormal-before.png",
+  "screenshot_b": "../abnormal/content-list-refresh-amap-abnormal-after.png",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [703, 553, 868, 637],
+  "expected_passed": false
+}
