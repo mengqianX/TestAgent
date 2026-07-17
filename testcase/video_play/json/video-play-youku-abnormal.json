@@ -1,0 +1,9 @@
+{
+  "task_id": "video-play-youku-abnormal",
+  "mode": "targeted",
+  "task_type": "video_play",
+  "video_file": "../abnormal/video-play-youku-abnormal.mp4",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "expected_passed": false
+}

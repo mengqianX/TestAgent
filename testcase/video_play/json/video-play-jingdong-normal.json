@@ -1,0 +1,9 @@
+{
+  "task_id": "video-play-jingdong-normal",
+  "mode": "targeted",
+  "task_type": "video_play",
+  "video_file": "../normal/video-play-jingdong-normal.mp4",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "expected_passed": true
+}
