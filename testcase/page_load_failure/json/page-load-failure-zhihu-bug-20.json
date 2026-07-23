@@ -1,0 +1,10 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "video_file": "../abnormal/screen-load-zhihu-abnormal-20.mp4",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [0, 1011, 1080, 1230],
+  "expected_passed": false
+}
