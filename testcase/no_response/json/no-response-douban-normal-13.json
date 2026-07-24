@@ -1,0 +1,10 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "video_file": "../normal/no-response-douban-normal-13.mp4",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [219, 306, 393, 399],
+  "expected_passed": true
+}

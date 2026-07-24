@@ -1,0 +1,10 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "video_file": "../normal/no-response-weibo-normal-8.mp4",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [807, 774, 987, 858],
+  "expected_passed": true
+}

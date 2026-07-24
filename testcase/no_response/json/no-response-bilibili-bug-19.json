@@ -1,0 +1,10 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "video_file": "../abnormal/no-response-bilibili-abnormal-19.mp4",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [0, 1252, 270, 1430],
+  "expected_passed": false
+}

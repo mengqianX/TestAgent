@@ -1,0 +1,10 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "video_file": "../abnormal/no-response-weibo-abnormal-9.mp4",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [228, 382, 979, 574],
+  "expected_passed": false
+}

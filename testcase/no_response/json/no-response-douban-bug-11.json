@@ -1,0 +1,10 @@
+{
+  "task_id": "",
+  "mode": "targeted",
+  "task_type": "",
+  "video_file": "../abnormal/no-response-douban-abnormal-11.mp4",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [138, 1591, 210, 1663],
+  "expected_passed": false
+}
