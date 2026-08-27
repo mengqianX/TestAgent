@@ -1,7 +1,7 @@
 {
-  "task_id": "",
+  "task_id": "content-list-refresh-jingdong-abnormal",
   "mode": "targeted",
-  "task_type": "",
+  "task_type": "list_refresh",
   "screenshot_a": "../abnormal/content-list-refresh-jingdong-abnormal-before.png",
   "screenshot_b": "../abnormal/content-list-refresh-jingdong-abnormal-after.png",
   "sample_interval_sec": 1.0,

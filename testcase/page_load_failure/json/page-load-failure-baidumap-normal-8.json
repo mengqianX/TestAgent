@@ -1,7 +1,7 @@
 {
-  "task_id": "",
+  "task_id": "page-load-failure-baidumap-normal-8",
   "mode": "targeted",
-  "task_type": "",
+  "task_type": "loading",
   "video_file": "../normal/screen-load-baidumap-normal-8.mp4",
   "sample_interval_sec": 1.0,
   "start_sec": 0.0,

@@ -1,7 +1,7 @@
 {
-  "task_id": "",
+  "task_id": "long-loading-tomato-bug-19",
   "mode": "targeted",
-  "task_type": "",
+  "task_type": "loading",
   "video_file": "../abnormal/long-load-tomato-abnormal-19.mp4",
   "sample_interval_sec": 1.0,
   "start_sec": 0.0,

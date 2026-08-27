@@ -1,7 +1,7 @@
 {
-  "task_id": "",
+  "task_id": "long-loading-wyy-bug-8",
   "mode": "targeted",
-  "task_type": "",
+  "task_type": "loading",
   "video_file": "../abnormal/long-load-wyy-abnormal-8.mp4",
   "sample_interval_sec": 1.0,
   "start_sec": 0.0,

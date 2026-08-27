@@ -1,7 +1,7 @@
 {
-  "task_id": "",
+  "task_id": "page-load-failure-bilibili-bug-15",
   "mode": "targeted",
-  "task_type": "",
+  "task_type": "loading",
   "video_file": "../abnormal/screen-load-bilibili-abnormal-15.mp4",
   "sample_interval_sec": 1.0,
   "start_sec": 0.0,

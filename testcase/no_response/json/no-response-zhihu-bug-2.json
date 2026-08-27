@@ -1,7 +1,7 @@
 {
-  "task_id": "",
+  "task_id": "no-response-zhihu-bug-2",
   "mode": "targeted",
-  "task_type": "",
+  "task_type": "loading",
   "video_file": "../abnormal/no-response-zhihu-abnormal-2.mp4",
   "sample_interval_sec": 1.0,
   "start_sec": 1.0,

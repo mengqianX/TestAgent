@@ -1,7 +1,7 @@
 {
-  "task_id": "",
+  "task_id": "content-list-refresh-bdmap-normal",
   "mode": "targeted",
-  "task_type": "",
+  "task_type": "list_refresh",
   "screenshot_a": "../normal/content-list-refresh-bdmap-normal-before.png",
   "screenshot_b": "../normal/content-list-refresh-bdmap-normal-after.png",
   "sample_interval_sec": 1.0,
