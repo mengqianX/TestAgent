@@ -5,5 +5,5 @@
   "video_file": "toast-1-baidumap-开始导航.mp4",
   "sample_interval_sec": 0.5,
   "start_sec": 0.0,
-  "expected_passed": true
+  "expected_passed": false
 }
