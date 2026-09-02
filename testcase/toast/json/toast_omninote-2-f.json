@@ -2,7 +2,7 @@
   "task_id": "toast_omninote-2-f",
   "mode": "targeted",
   "task_type": "toast",
-  "video_file": "../abnormal/toast-omninote-bug-1.mp4",
+  "video_file": "../abnormal/toast-omninote-bug-1-short.mp4",
   "sample_interval_sec": 0.5,
   "start_sec": 0.0,
   "expected_passed": false
