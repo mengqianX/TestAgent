@@ -1,0 +1,9 @@
+{
+  "task_id": "toast_baidumap-4",
+  "mode": "targeted",
+  "task_type": "toast",
+  "video_file": "toast-baidumap-bug-2.mp4",
+  "sample_interval_sec": 0.5,
+  "start_sec": 0.0,
+  "expected_passed": false
+}
