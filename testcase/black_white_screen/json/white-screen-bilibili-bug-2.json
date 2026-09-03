@@ -1,0 +1,10 @@
+{
+  "task_id": "white-screen-bilibili-bug-2",
+  "mode": "targeted",
+  "task_type": "loading",
+  "video_file": "../bug/white-screen-bilibili-bug-2.mp4",
+  "sample_interval_sec": 1.0,
+  "start_sec": 0.0,
+  "bounds": [0, 252, 196, 438],
+  "expected_passed": false
+}
