@@ -1,8 +1,8 @@
 {
-  "task_id": "toast_omninote-4",
+  "task_id": "toast_meituan-3-f",
   "mode": "targeted",
   "task_type": "toast",
-  "video_file": "toast-4-omninote-笔记归档.mp4",
+  "video_file": "toast-3-meituan-举报评价-f.mp4",
   "sample_interval_sec": 0.5,
   "start_sec": 0.0,
   "expected_passed": true
