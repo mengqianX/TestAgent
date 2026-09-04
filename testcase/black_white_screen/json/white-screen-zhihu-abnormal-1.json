@@ -1,8 +1,8 @@
 {
-  "task_id": "white-screen-zhihu-bug-1",
+  "task_id": "white-screen-zhihu-abnormal-1",
   "mode": "targeted",
   "task_type": "loading",
-  "video_file": "../bug/white-screen-zhihu-bug-1.mp4",
+  "video_file": "../abnormal/white-screen-zhihu-abnormal-1.mp4",
   "sample_interval_sec": 1.0,
   "start_sec": 0.0,
   "bounds": [48, 294, 254, 510],

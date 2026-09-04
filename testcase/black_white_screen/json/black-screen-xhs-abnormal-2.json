@@ -1,8 +1,8 @@
 {
-  "task_id": "black-screen-xhs-bug-2",
+  "task_id": "black-screen-xhs-abnormal-2",
   "mode": "targeted",
   "task_type": "loading",
-  "video_file": "../bug/black-screen-xhs-bug-2.mp4",
+  "video_file": "../abnormal/black-screen-xhs-abnormal-2.mp4",
   "sample_interval_sec": 1.0,
   "start_sec": 0.0,
   "bounds": [940, 620, 1180, 700],

@@ -1,8 +1,8 @@
 {
-  "task_id": "garbled-screen-baidumap-bug-1",
+  "task_id": "garbled-screen-xhs-abnormal-6",
   "mode": "targeted",
   "task_type": "loading",
-  "video_file": "../bug/garbled-screen-baidumap-bug-1.mp4",
+  "video_file": "../abnormal/garbled-screen-xhs-abnormal-6.mp4",
   "sample_interval_sec": 1.0,
   "start_sec": 0.0,
   "bounds": [],

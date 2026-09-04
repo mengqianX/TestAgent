@@ -1,8 +1,8 @@
 {
-  "task_id": "black-screen-zhihu-bug-2",
+  "task_id": "black-screen-zhihu-abnormal-2",
   "mode": "targeted",
   "task_type": "loading",
-  "video_file": "../bug/black-screen-zhihu-bug-2.mp4",
+  "video_file": "../abnormal/black-screen-zhihu-abnormal-2.mp4",
   "sample_interval_sec": 1.0,
   "start_sec": 0.0,
   "bounds": [648, 2070, 864, 2244],

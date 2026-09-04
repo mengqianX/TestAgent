@@ -1,10 +1,10 @@
 {
-  "task_id": "white-screen-xhs-bug-1",
+  "task_id": "garbled-screen-wyy-abnormal-1",
   "mode": "targeted",
   "task_type": "loading",
-  "video_file": "../bug/white-screen-xhs-bug-1.mp4",
+  "video_file": "../abnormal/garbled-screen-wyy-abnormal-1.mp4",
   "sample_interval_sec": 1.0,
   "start_sec": 0.0,
-  "bounds": [380, 280, 560, 340],
+  "bounds": [],
   "expected_passed": false
 }
